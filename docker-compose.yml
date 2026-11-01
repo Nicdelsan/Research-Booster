@@ -1,0 +1,31 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: rb
+      POSTGRES_PASSWORD: ${RB_DB_PASSWORD:-rb-dev-only}
+      POSTGRES_DB: rb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rb"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      RB_DATABASE_URL: postgresql+psycopg://rb:${RB_DB_PASSWORD:-rb-dev-only}@db:5432/rb
+      RB_STORAGE_DIR: /data/storage
+    volumes:
+      - storage:/data/storage
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  storage:
