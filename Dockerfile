@@ -4,7 +4,8 @@ RUN useradd --create-home --uid 10001 rb
 WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install --no-cache-dir ".[postgres]"
+COPY alembic.ini ./
+RUN pip install --no-cache-dir .
 
 USER rb
 EXPOSE 8000

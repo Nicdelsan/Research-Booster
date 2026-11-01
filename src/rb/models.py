@@ -6,6 +6,7 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rb.db import Base
@@ -20,6 +21,9 @@ def _now() -> datetime:
 
 
 CLASSIFICATIONS = ("public", "internal", "confidential", "controlled")
+
+# JSONB su PostgreSQL (indicizzabile, confronti efficienti), JSON altrove.
+JSONType = JSON().with_variant(JSONB(), "postgresql")
 
 
 class Project(Base):
@@ -46,7 +50,7 @@ class Artifact(Base):
     size_bytes: Mapped[int] = mapped_column(Integer)
     classification: Mapped[str] = mapped_column(String(20), default="internal")
     storage_path: Mapped[str] = mapped_column(String(1000))
-    meta: Mapped[dict] = mapped_column(JSON, default=dict)
+    meta: Mapped[dict] = mapped_column(JSONType, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     project: Mapped[Project] = relationship(back_populates="artifacts")
@@ -61,7 +65,7 @@ class Node(Base):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     type: Mapped[str] = mapped_column(String(40), index=True)
     label: Mapped[str] = mapped_column(String(500))
-    props: Mapped[dict] = mapped_column(JSON, default=dict)
+    props: Mapped[dict] = mapped_column(JSONType, default=dict)
     artifact_id: Mapped[str | None] = mapped_column(ForeignKey("artifacts.id"), nullable=True)
 
 
@@ -73,7 +77,7 @@ class Edge(Base):
     source_id: Mapped[str] = mapped_column(ForeignKey("nodes.id"), index=True)
     target_id: Mapped[str] = mapped_column(ForeignKey("nodes.id"), index=True)
     relation: Mapped[str] = mapped_column(String(40))
-    props: Mapped[dict] = mapped_column(JSON, default=dict)
+    props: Mapped[dict] = mapped_column(JSONType, default=dict)
 
 
 class Hypothesis(Base):
@@ -82,8 +86,8 @@ class Hypothesis(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     statement: Mapped[str] = mapped_column(Text)
-    card: Mapped[dict] = mapped_column(JSON)
-    lint: Mapped[dict] = mapped_column(JSON, default=dict)
+    card: Mapped[dict] = mapped_column(JSONType)
+    lint: Mapped[dict] = mapped_column(JSONType, default=dict)
     status: Mapped[str] = mapped_column(String(20), default="proposed")
     prior: Mapped[float] = mapped_column(Float)
     # Esito registrato dopo il test: True corroborata, False smentita, None aperta
@@ -100,10 +104,10 @@ class ProvenanceRecord(Base):
     project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
     activity: Mapped[str] = mapped_column(String(100))
     agent: Mapped[str] = mapped_column(String(100))
-    inputs: Mapped[list] = mapped_column(JSON, default=list)
-    outputs: Mapped[list] = mapped_column(JSON, default=list)
-    params: Mapped[dict] = mapped_column(JSON, default=dict)
-    environment: Mapped[dict] = mapped_column(JSON, default=dict)
+    inputs: Mapped[list] = mapped_column(JSONType, default=list)
+    outputs: Mapped[list] = mapped_column(JSONType, default=list)
+    params: Mapped[dict] = mapped_column(JSONType, default=dict)
+    environment: Mapped[dict] = mapped_column(JSONType, default=dict)
     created_at: Mapped[str] = mapped_column(String(40))
     prev_hash: Mapped[str] = mapped_column(String(64))
     record_hash: Mapped[str] = mapped_column(String(64), unique=True)
