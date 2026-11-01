@@ -38,6 +38,18 @@ Ogni decisione rilevante ha una voce breve: contesto, decisione, conseguenze. Si
 - **Decisione:** correzione di Šidák sul numero totale di finestre; livelli: indizio da 2σ, evidenza candidata da 3σ, anomalia forte da 5σ globali.
 - **Conseguenze:** stima prudente (finestre sovrapposte sono correlate); in futuro si può affinare con pseudo-esperimenti.
 
+## ADR-008 · Schema gestito solo da migrazioni Alembic
+
+- **Contesto:** clienti on-premise aggiorneranno versioni diverse in momenti diversi; lo schema deve evolvere senza perdere dati.
+- **Decisione:** nessun `create_all`; ogni modifica ai modelli passa da una migrazione versionata nel pacchetto (`rb:migrations`). La CI verifica che modelli e migrazioni coincidano (`alembic check`) e che le migrazioni siano reversibili. L'API migra all'avvio, disattivabile con `RB_AUTO_MIGRATE=false`.
+- **Conseguenze:** gli amministratori possono ottenere lo script SQL offline; su SQLite le modifiche future useranno la modalità batch.
+
+## ADR-009 · Catena di provenienza serializzata per progetto su PostgreSQL
+
+- **Contesto:** due richieste concorrenti leggevano lo stesso ultimo hash e biforcavano la catena (riprodotto in un test).
+- **Decisione:** `pg_advisory_xact_lock` per progetto prima di leggere l'ultimo hash; il lock si rilascia al commit.
+- **Conseguenze:** le scritture di provenienza dello stesso progetto sono sequenziali; progetti diversi restano in parallelo.
+
 ## ADR-007 · Sviluppo in parallelo alla discovery
 
 - **Contesto:** il fondatore ha scelto di non attendere la fine delle 12 settimane di discovery.

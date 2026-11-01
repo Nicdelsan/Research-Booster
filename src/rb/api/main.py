@@ -55,11 +55,13 @@ class AnomalyRequest(BaseModel):
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     engine = make_engine(settings.database_url)
-    init_db(engine)
+    if settings.auto_migrate:
+        init_db(engine)
     session_factory = make_session_factory(engine)
 
     app = FastAPI(title="Research Booster API", version=__version__)
     app.state.settings = settings
+    app.state.engine = engine
 
     def get_session():
         with session_factory() as session:

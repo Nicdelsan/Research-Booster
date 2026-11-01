@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from importlib import metadata
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from rb.models import ProvenanceRecord
@@ -55,6 +55,17 @@ def environment_snapshot() -> dict:
     return env
 
 
+def _lock_chain(session: Session, project_id: str) -> None:
+    """Su PostgreSQL serializza le scritture sulla catena di un progetto fino al commit della transazione.
+
+    Senza il lock due richieste concorrenti leggerebbero lo stesso ultimo hash e la catena si biforcherebbe.
+    SQLite serializza già le scritture sull'intero database.
+    """
+    if session.get_bind().dialect.name == "postgresql":
+        session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+                        {"key": f"rb-provenance:{project_id}"})
+
+
 def _last_hash(session: Session, project_id: str) -> str:
     stmt = (
         select(ProvenanceRecord.record_hash)
@@ -76,6 +87,7 @@ def record(
     params: dict | None = None,
 ) -> ProvenanceRecord:
     """Aggiunge un record alla catena del progetto. Non fa commit."""
+    _lock_chain(session, project_id)
     body = {
         "project_id": project_id,
         "activity": activity,
